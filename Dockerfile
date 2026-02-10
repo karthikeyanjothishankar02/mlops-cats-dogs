@@ -36,6 +36,7 @@ COPY --from=builder /usr/local/bin /usr/local/bin
 # Copy application code
 COPY src/ src/
 COPY deployment/ deployment/
+COPY models /app/models
 
 # Environment variables
 ENV PYTHONUNBUFFERED=1
