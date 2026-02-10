@@ -12,6 +12,9 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
 
+    env:
+      DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -27,60 +30,61 @@ jobs:
 
       - name: Pull latest image
         run: |
-          docker pull ${{ secrets.DOCKER_USERNAME }}/cats-dogs-classifier:latest
+          docker pull $DOCKER_USERNAME/cats-dogs-classifier:latest
 
       - name: Deploy with Docker Compose (v2)
         run: |
-          # Stop existing services
           docker compose -f deployment/docker-compose.yml down || true
-
           docker compose -f deployment/docker-compose.yml pull
-
-          # Deploy new version
           docker compose -f deployment/docker-compose.yml up -d cats-dogs-classifier
 
-          # Wait for service to be ready
-          sleep 15
+          echo "Waiting for service to become healthy..."
+
+          for i in {1..30}; do
+            STATUS=$(docker inspect --format='{{.State.Health.Status}}' cats-dogs-classifier 2>/dev/null || echo "starting")
+            echo "Status: $STATUS"
+
+            if [ "$STATUS" = "healthy" ]; then
+              echo "Service is healthy"
+              break
+            fi
+
+            sleep 5
+          done
+
+          if [ "$STATUS" != "healthy" ]; then
+            echo "Service failed to become healthy"
+            docker logs cats-dogs-classifier
+            exit 1
+          fi
 
       - name: Run smoke tests
         run: |
           echo "Testing health endpoint..."
-          response=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8000/health)
-          if [ "$response" -ne 200 ]; then
-            echo "Health check failed with status $response"
-            exit 1
-          fi
-          echo "Health check passed"
+          curl -f http://localhost:8000/health
 
           echo "Testing prediction endpoint..."
 
           python3 - <<EOF
           from PIL import Image
-          img = Image.new('RGB', (224, 224), color='blue')
-          img.save('test_image.jpg')
+          img = Image.new("RGB", (224, 224), color="blue")
+          img.save("test_image.jpg")
           EOF
 
-          response=$(curl -s -X POST "http://localhost:8000/predict" \
+          curl -f -X POST "http://localhost:8000/predict" \
             -H "accept: application/json" \
             -H "Content-Type: multipart/form-data" \
-            -F "file=@test_image.jpg" \
-            -w "\n%{http_code}")
+            -F "file=@test_image.jpg"
 
-          http_code=$(echo "$response" | tail -n1)
-
-          if [ "$http_code" -ne 200 ]; then
-            echo "Prediction test failed with status $http_code"
-            exit 1
-          fi
-
-          echo "Prediction test passed"
           rm test_image.jpg
+          echo "Smoke tests passed"
 
       - name: Rollback on failure
         if: failure()
         run: |
-          echo "Deployment failed, rolling back..."
+          echo "Deployment failed — rolling back"
           docker compose -f deployment/docker-compose.yml down
+          docker logs cats-dogs-classifier || true
 
       - name: Notify deployment status
         if: always()
