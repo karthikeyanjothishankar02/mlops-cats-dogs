@@ -1,55 +1,46 @@
-# Multi-stage build for optimized image size
-FROM python:3.9-slim as builder
+# =========================
+# Builder stage
+# =========================
+FROM python:3.9-slim AS builder
 
-# Set working directory
 WORKDIR /app
 
-# Install system dependencies
+# Install build dependencies
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
+    gcc \
     && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements
-COPY requirements.txt .
+# Copy requirements first (better caching)
+COPY requirements.txt requirements-dev.txt ./
 
-# Install Python dependencies
-RUN pip install --no-cache-dir -r requirements.txt
+# Upgrade pip & install deps INTO SYSTEM
+RUN python -m pip install --upgrade pip wheel \
+    && pip install --no-cache-dir --prefer-binary \
+       -r requirements.txt \
+       -r requirements-dev.txt
 
-# Final stage
+# =========================
+# Runtime stage
+# =========================
 FROM python:3.9-slim
 
-# Set working directory
 WORKDIR /app
 
-# Install runtime dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    libgomp1 \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
+# Copy installed Python packages
+COPY --from=builder /usr/local/lib/python3.9/site-packages \
+                     /usr/local/lib/python3.9/site-packages
 
-# Copy Python dependencies from builder
-COPY --from=builder /root/.local /root/.local
-
-# Make sure scripts in .local are usable
-ENV PATH=/root/.local/bin:$PATH
+COPY --from=builder /usr/local/bin /usr/local/bin
 
 # Copy application code
-COPY src/ ./src/
-COPY models/ ./models/
+COPY src/ src/
+COPY deployment/ deployment/
 
-# Create necessary directories
-RUN mkdir -p /app/logs
+# Environment variables
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONDONTWRITEBYTECODE=1
 
-# Expose port
 EXPOSE 8000
 
-# Set environment variables
-ENV PYTHONUNBUFFERED=1
-ENV PYTHONPATH=/app
-
-# Health check
-HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
-    CMD curl -f http://localhost:8000/health || exit 1
-
-# Run the application
 CMD ["uvicorn", "src.inference.app:app", "--host", "0.0.0.0", "--port", "8000"]
