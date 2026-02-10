@@ -12,6 +12,11 @@ venv/
 # OS
 .DS_Store
 
+# ML Models (DO NOT COMMIT)
+models/
+*.pt
+*.pth
+*.onnx
 
 # MLflow
 mlruns/
