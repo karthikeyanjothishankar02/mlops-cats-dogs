@@ -1,10 +1,44 @@
-venv/
+# Python
 __pycache__/
-*.pyc
-data/raw/
-data/processed/
-models/*.pt
-mlruns/
-logs/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
 .env
+
+# Jupyter
+.ipynb_checkpoints/
+
+# OS
+.DS_Store
+
+# ML Models (DO NOT COMMIT)
+models/
+*.pt
+*.pth
+*.onnx
+
+# MLflow
+mlruns/
+mlartifacts/
+
+# DVC
+.dvc/
+.dvc/cache/
+
+# Data
+data/
+datasets/
+*.csv
+*.zip
+
+# Logs
+logs/
 *.log
+
+# Coverage
+.coverage
+htmlcov/
+
+# Docker
+*.tar
