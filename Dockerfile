@@ -33,22 +33,3 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libjpeg-dev \
     zlib1g-dev \
     libpng-dev \
-    && rm -rf /var/lib/apt/lists/*
-
-# Copy installed Python packages
-COPY --from=builder /install /usr/local
-
-# Copy application code
-COPY src/ src/
-COPY deployment/ deployment/
-COPY models/ models/
-
-# Environment variables
-ENV PYTHONUNBUFFERED=1
-ENV PYTHONDONTWRITEBYTECODE=1
-
-EXPOSE 8000
-
-# Command
-CMD ["uvicorn", "src.inference.app:app", "--host", "0.0.0.0", "--port", "8000"]
-

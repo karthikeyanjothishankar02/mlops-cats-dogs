@@ -71,6 +71,10 @@ jobs:
             exit 1
           fi
 
+      - name: Install test dependencies
+        run: |
+          pip install pillow
+
       - name: Run smoke tests
         run: |
           echo "Testing health endpoint..."
