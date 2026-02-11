@@ -1,7 +1,7 @@
 services:
   cats-dogs-classifier:
     build:
-      context: ..                  # Path to your repo root
+      context: ..                  # Repo root
       dockerfile: Dockerfile
     container_name: cats-dogs-classifier
 
@@ -12,6 +12,10 @@ services:
       API_HOST: 0.0.0.0
       API_PORT: 8000
       LOG_LEVEL: INFO
+
+    # ✅ Mount models folder from host
+    volumes:
+      - ../models:/app/models
 
     restart: unless-stopped
 

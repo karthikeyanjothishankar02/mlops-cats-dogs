@@ -9,6 +9,7 @@ WORKDIR /app
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     gcc \
+    wget \
     && rm -rf /var/lib/apt/lists/*
 
 # Copy requirements first (better caching)
@@ -30,14 +31,15 @@ WORKDIR /app
 # Copy installed Python packages
 COPY --from=builder /usr/local/lib/python3.9/site-packages \
                      /usr/local/lib/python3.9/site-packages
-
 COPY --from=builder /usr/local/bin /usr/local/bin
 
 # Copy application code
 COPY src/ src/
 COPY deployment/ deployment/
-# Copy the real model
-COPY models/final_model.pt /app/models/final_model.pt
+
+# ✅ REMOVE model copy line
+# COPY models/final_model.pt /app/models/final_model.pt
+
 # Environment variables
 ENV PYTHONUNBUFFERED=1
 ENV PYTHONDONTWRITEBYTECODE=1
