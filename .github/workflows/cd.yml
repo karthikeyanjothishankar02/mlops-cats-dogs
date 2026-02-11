@@ -16,12 +16,37 @@ jobs:
       DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
 
     steps:
+      # -----------------------------
+      # Install Git LFS
+      # -----------------------------
+      - name: Install Git LFS
+        run: |
+          sudo apt-get update
+          sudo apt-get install git-lfs -y
+          git lfs install
+
+      # -----------------------------
+      # Checkout repository
+      # -----------------------------
       - name: Checkout code with LFS
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
           lfs: true
 
+      # IMPORTANT: Actually pull LFS files
+      - name: Pull LFS files
+        run: git lfs pull
+
+      # Debug (can remove later)
+      - name: Verify model exists
+        run: |
+          echo "Checking models folder..."
+          ls -lh models || true
+
+      # -----------------------------
+      # Docker Setup
+      # -----------------------------
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -35,6 +60,9 @@ jobs:
         run: |
           docker pull $DOCKER_USERNAME/cats-dogs-classifier:latest || true
 
+      # -----------------------------
+      # Deploy
+      # -----------------------------
       - name: Deploy with Docker Compose
         run: |
           docker compose -f deployment/docker-compose.yml down || true
@@ -58,6 +86,9 @@ jobs:
             exit 1
           fi
 
+      # -----------------------------
+      # Smoke Tests
+      # -----------------------------
       - name: Install test dependencies
         run: pip install pillow
 
@@ -81,6 +112,9 @@ jobs:
           rm test_image.jpg
           echo "Smoke tests passed"
 
+      # -----------------------------
+      # Rollback (if needed)
+      # -----------------------------
       - name: Rollback on failure
         if: failure()
         run: |
