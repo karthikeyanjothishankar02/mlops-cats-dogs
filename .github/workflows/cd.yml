@@ -16,8 +16,11 @@ jobs:
       DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
 
     steps:
-      - name: Checkout code
+      - name: Checkout code with LFS
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          lfs: true
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -32,23 +35,20 @@ jobs:
         run: |
           docker pull $DOCKER_USERNAME/cats-dogs-classifier:latest
 
-      - name: Deploy with Docker Compose (v2)
+      - name: Deploy with Docker Compose
         run: |
           docker compose -f deployment/docker-compose.yml down || true
           docker compose -f deployment/docker-compose.yml pull
           docker compose -f deployment/docker-compose.yml up -d cats-dogs-classifier
 
           echo "Waiting for service to become healthy..."
-
           for i in {1..30}; do
             STATUS=$(docker inspect --format='{{.State.Health.Status}}' cats-dogs-classifier 2>/dev/null || echo "starting")
             echo "Status: $STATUS"
-
             if [ "$STATUS" = "healthy" ]; then
               echo "Service is healthy"
               break
             fi
-
             sleep 5
           done
 
@@ -64,7 +64,6 @@ jobs:
           curl -f http://localhost:8000/health
 
           echo "Testing prediction endpoint..."
-
           python3 - <<EOF
           from PIL import Image
           img = Image.new("RGB", (224, 224), color="blue")
