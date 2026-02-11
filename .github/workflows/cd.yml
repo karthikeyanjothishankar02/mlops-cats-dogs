@@ -35,7 +35,20 @@ jobs:
         run: |
           docker pull $DOCKER_USERNAME/cats-dogs-classifier:latest
 
+      - name: Verify model file exists
+        run: |
+          if [ ! -f models/final_model.pt ]; then
+            echo "Error: Model file not found at models/final_model.pt"
+            echo "LFS files:"
+            git lfs ls-files
+            exit 1
+          fi
+          echo "Model file exists"
+          ls -lh models/final_model.pt
+
       - name: Deploy with Docker Compose
+        env:
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
         run: |
           docker compose -f deployment/docker-compose.yml down || true
           docker compose -f deployment/docker-compose.yml pull
