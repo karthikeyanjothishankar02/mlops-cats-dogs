@@ -175,29 +175,37 @@ jobs:
           docker logs cats-dogs-classifier 2>&1 | tail -100
           exit 1
 
+      - name: Install test dependencies
+        run: pip install pillow
+
       - name: Run smoke tests
         run: |
           echo "=== Running Smoke Tests ==="
           
           echo "1. Testing health endpoint..."
           curl -sf http://localhost:8000/health
+          echo ""
           
           echo "2. Testing root endpoint..."
           curl -sf http://localhost:8000/
+          echo ""
           
           echo "3. Testing metrics endpoint..."
           curl -sf http://localhost:8000/metrics
+          echo ""
           
           echo "4. Testing prediction endpoint..."
           python3 << 'EOF'
           from PIL import Image
           img = Image.new("RGB", (224, 224), color=(100, 150, 200))
           img.save("test_image.jpg", "JPEG")
+          print("Test image created")
           EOF
           
           curl -sf -X POST "http://localhost:8000/predict" \
             -H "accept: application/json" \
             -F "file=@test_image.jpg"
+          echo ""
           
           rm -f test_image.jpg
           echo ""
@@ -215,6 +223,8 @@ jobs:
         if: failure()
         run: |
           docker compose -f deployment/docker-compose.yml down --remove-orphans || true
+
+
 
 
 
