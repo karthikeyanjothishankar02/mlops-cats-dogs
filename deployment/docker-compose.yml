@@ -2,7 +2,9 @@ version: "3.8"
 
 services:
   cats-dogs-classifier:
-    image: ${DOCKER_USERNAME}/cats-dogs-classifier:latest
+    build:
+      context: ..                  # Path to your repo root
+      dockerfile: deployment/Dockerfile
     container_name: cats-dogs-classifier
 
     ports:
