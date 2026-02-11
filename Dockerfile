@@ -5,7 +5,7 @@ FROM python:3.9-slim AS builder
 
 WORKDIR /app
 
-# Install build dependencies for Pillow and other packages
+# Install build dependencies for Python packages like Pillow
 RUN apt-get update && apt-get install -y --no-install-recommends \
     gcc \
     libjpeg-dev \

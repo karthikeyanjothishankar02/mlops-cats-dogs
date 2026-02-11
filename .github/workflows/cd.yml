@@ -22,12 +22,6 @@ jobs:
           fetch-depth: 0
           lfs: true
 
-      - name: Ensure model is present
-        run: |
-          mkdir -p models
-          cp path/to/final_model.pt models/  # <-- replace with actual path in repo
-          ls -lh models/
-
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
@@ -42,8 +36,6 @@ jobs:
           docker pull $DOCKER_USERNAME/cats-dogs-classifier:latest || true
 
       - name: Deploy with Docker Compose
-        env:
-          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
         run: |
           docker compose -f deployment/docker-compose.yml down || true
           docker compose -f deployment/docker-compose.yml pull
