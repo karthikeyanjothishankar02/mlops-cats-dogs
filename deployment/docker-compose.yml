@@ -11,8 +11,9 @@ services:
       API_PORT: 8000
       LOG_LEVEL: INFO
 
+    # Ensure the path matches workflow directory
     volumes:
-      - ../models:/app/models:ro
+      - ./models:/app/models:ro
 
     restart: unless-stopped
 
@@ -20,6 +21,5 @@ services:
       test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
       interval: 10s
       timeout: 5s
-      retries: 12         # allow ~2 minutes for startup
-      start_period: 30s   # wait 30s before first health check
-
+      retries: 24         # allow ~4 minutes for startup
+      start_period: 30s
