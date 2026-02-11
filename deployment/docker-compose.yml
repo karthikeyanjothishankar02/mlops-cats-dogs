@@ -1,25 +1,30 @@
 services:
   cats-dogs-classifier:
-    image: "${DOCKER_USERNAME}/cats-dogs-classifier:latest"
+    image: "${DOCKER_USERNAME:-local}/cats-dogs-classifier:latest"
     container_name: cats-dogs-classifier
+    
+    build:
+      context: ..
+      dockerfile: Dockerfile
 
     ports:
       - "8000:8000"
 
     environment:
-      API_HOST: 0.0.0.0
-      API_PORT: 8000
-      LOG_LEVEL: INFO
+      - API_HOST=0.0.0.0
+      - API_PORT=8000
+      - LOG_LEVEL=INFO
 
-    # Use the local models folder (Git LFS)
-    volumes:
-      - ./models:/app/models:ro
+    # Models are baked into the image via Dockerfile
+    # No volume mount needed - avoids path issues in CI/CD
 
     restart: unless-stopped
 
     healthcheck:
-      test: ["CMD-SHELL", "curl -f http://localhost:8000/health || exit 1"]
-      interval: 10s
-      timeout: 5s
-      retries: 24         # ~4 minutes for model load
-      start_period: 30s
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 20
+      start_period: 60s
+
+

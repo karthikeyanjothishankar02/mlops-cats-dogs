@@ -12,37 +12,26 @@ jobs:
     runs-on: ubuntu-latest
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
 
-    env:
-      DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
-
     steps:
-      # -----------------------------
-      # Install Git LFS
-      # -----------------------------
-      - name: Install Git LFS
-        run: |
-          sudo apt-get update
-          sudo apt-get install git-lfs -y
-          git lfs install
-
       # -----------------------------
       # Checkout repository
       # -----------------------------
-      - name: Checkout code with LFS
+      - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0
           lfs: true
 
-      # IMPORTANT: Actually pull LFS files
       - name: Pull LFS files
         run: git lfs pull
 
-      # Debug (can remove later)
-      - name: Verify model exists
+      - name: Verify files exist
         run: |
-          echo "Checking models folder..."
-          ls -lh models || true
+          echo "=== Repository structure ==="
+          ls -la
+          echo "=== Models folder ==="
+          ls -lh models/ || echo "No models folder"
+          echo "=== Deployment folder ==="
+          ls -la deployment/
 
       # -----------------------------
       # Docker Setup
@@ -58,75 +47,141 @@ jobs:
 
       - name: Pull latest image
         run: |
-          docker pull $DOCKER_USERNAME/cats-dogs-classifier:latest || true
+          docker pull ${{ secrets.DOCKER_USERNAME }}/cats-dogs-classifier:latest || echo "No existing image found, will use local build"
 
       # -----------------------------
-      # Deploy
+      # Deploy with Docker Compose
       # -----------------------------
-      - name: Deploy with Docker Compose
+      - name: Stop existing containers
         run: |
-          docker compose -f deployment/docker-compose.yml down || true
-          docker compose -f deployment/docker-compose.yml pull
-          docker compose -f deployment/docker-compose.yml up -d cats-dogs-classifier
+          docker compose -f deployment/docker-compose.yml down --remove-orphans || true
+          docker rm -f cats-dogs-classifier 2>/dev/null || true
 
-          echo "Waiting for service to become healthy..."
-          for i in {1..30}; do
-            STATUS=$(docker inspect --format='{{.State.Health.Status}}' cats-dogs-classifier 2>/dev/null || echo "starting")
-            echo "Status: $STATUS"
-            if [ "$STATUS" = "healthy" ]; then
-              echo "Service is healthy"
-              break
+      - name: Deploy service
+        env:
+          DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+        run: |
+          echo "Starting deployment..."
+          docker compose -f deployment/docker-compose.yml up -d --pull always
+          
+          echo "Container started. Waiting for health check..."
+          sleep 10
+
+      - name: Wait for service to be healthy
+        run: |
+          echo "Checking container status..."
+          
+          MAX_ATTEMPTS=40
+          ATTEMPT=0
+          
+          while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
+            ATTEMPT=$((ATTEMPT + 1))
+            echo "Attempt $ATTEMPT/$MAX_ATTEMPTS"
+            
+            # Check if container exists and is running
+            CONTAINER_STATUS=$(docker inspect -f '{{.State.Status}}' cats-dogs-classifier 2>/dev/null || echo "not_found")
+            echo "  Container status: $CONTAINER_STATUS"
+            
+            if [ "$CONTAINER_STATUS" = "not_found" ]; then
+              echo "  Container not found!"
+              docker compose -f deployment/docker-compose.yml ps
+              sleep 5
+              continue
             fi
+            
+            if [ "$CONTAINER_STATUS" != "running" ]; then
+              echo "  Container not running yet..."
+              sleep 5
+              continue
+            fi
+            
+            # Check health status
+            HEALTH=$(docker inspect -f '{{.State.Health.Status}}' cats-dogs-classifier 2>/dev/null || echo "no_health")
+            echo "  Health status: $HEALTH"
+            
+            if [ "$HEALTH" = "healthy" ]; then
+              echo "Service is healthy!"
+              exit 0
+            fi
+            
+            # Try direct health check
+            if curl -sf http://localhost:8000/health > /dev/null 2>&1; then
+              echo "Health endpoint responding!"
+              exit 0
+            fi
+            
             sleep 5
           done
-
-          if [ "$STATUS" != "healthy" ]; then
-            echo "Service failed to become healthy. Showing logs..."
-            docker logs cats-dogs-classifier
-            exit 1
-          fi
+          
+          echo "=== DEPLOYMENT FAILED ==="
+          echo "Container logs:"
+          docker logs cats-dogs-classifier 2>&1 | tail -100
+          echo ""
+          echo "Container inspect:"
+          docker inspect cats-dogs-classifier | head -50
+          exit 1
 
       # -----------------------------
       # Smoke Tests
       # -----------------------------
-      - name: Install test dependencies
-        run: pip install pillow
-
       - name: Run smoke tests
         run: |
-          echo "Testing health endpoint..."
-          curl -f http://localhost:8000/health
-
-          echo "Testing prediction endpoint..."
-          python3 - <<EOF
+          echo "=== Running Smoke Tests ==="
+          
+          echo "1. Testing health endpoint..."
+          HEALTH_RESPONSE=$(curl -sf http://localhost:8000/health)
+          echo "   Response: $HEALTH_RESPONSE"
+          
+          echo "2. Testing root endpoint..."
+          ROOT_RESPONSE=$(curl -sf http://localhost:8000/)
+          echo "   Response: $ROOT_RESPONSE"
+          
+          echo "3. Testing metrics endpoint..."
+          METRICS_RESPONSE=$(curl -sf http://localhost:8000/metrics)
+          echo "   Response: $METRICS_RESPONSE"
+          
+          echo "4. Testing prediction endpoint..."
+          # Create a simple test image using Python
+          python3 << 'EOF'
           from PIL import Image
-          img = Image.new("RGB", (224, 224), color="blue")
-          img.save("test_image.jpg")
+          img = Image.new("RGB", (224, 224), color=(100, 150, 200))
+          img.save("test_image.jpg", "JPEG")
+          print("Test image created")
           EOF
-
-          curl -f -X POST "http://localhost:8000/predict" \
+          
+          PREDICT_RESPONSE=$(curl -sf -X POST "http://localhost:8000/predict" \
             -H "accept: application/json" \
-            -H "Content-Type: multipart/form-data" \
-            -F "file=@test_image.jpg"
-
-          rm test_image.jpg
-          echo "Smoke tests passed"
+            -F "file=@test_image.jpg")
+          echo "   Response: $PREDICT_RESPONSE"
+          
+          rm -f test_image.jpg
+          
+          echo ""
+          echo "=== All smoke tests passed! ==="
 
       # -----------------------------
-      # Rollback (if needed)
+      # Cleanup on failure
       # -----------------------------
-      - name: Rollback on failure
+      - name: Show logs on failure
         if: failure()
         run: |
-          echo "Deployment failed — rolling back"
-          docker compose -f deployment/docker-compose.yml down
-          docker logs cats-dogs-classifier || true
+          echo "=== Deployment Failed - Debug Info ==="
+          echo ""
+          echo "Docker containers:"
+          docker ps -a
+          echo ""
+          echo "Docker images:"
+          docker images | head -20
+          echo ""
+          echo "Container logs:"
+          docker logs cats-dogs-classifier 2>&1 || echo "No logs available"
+          echo ""
+          echo "Docker compose config:"
+          docker compose -f deployment/docker-compose.yml config
 
-      - name: Notify deployment status
-        if: always()
+      - name: Cleanup on failure
+        if: failure()
         run: |
-          if [ "${{ job.status }}" = "success" ]; then
-            echo "✅ Deployment successful"
-          else
-            echo "❌ Deployment failed"
-          fi
+          docker compose -f deployment/docker-compose.yml down --remove-orphans || true
+
+

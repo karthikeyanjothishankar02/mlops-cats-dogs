@@ -13,7 +13,16 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 1
+          lfs: true
+
+      - name: Pull LFS files
+        run: git lfs pull
+
+      - name: Verify model files
+        run: |
+          echo "Checking model files..."
+          ls -lh models/
+          file models/*.pt || true
 
       - name: Free disk space
         run: |
@@ -70,3 +79,5 @@ jobs:
           tags: |
             ${{ secrets.DOCKER_USERNAME }}/cats-dogs-classifier:latest
             ${{ secrets.DOCKER_USERNAME }}/cats-dogs-classifier:${{ github.sha }}
+
+
