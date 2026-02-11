@@ -41,6 +41,7 @@ COPY --from=builder /install /usr/local
 # Copy application code
 COPY src/ /app/src/
 COPY deployment/ /app/deployment/
+COPY models/ /app/models/ 
 
 # Expose port
 EXPOSE 8000
