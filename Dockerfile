@@ -5,21 +5,15 @@ FROM python:3.9-slim AS builder
 
 WORKDIR /app
 
-# Install build dependencies
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    build-essential \
-    gcc \
-    wget \
-    && rm -rf /var/lib/apt/lists/*
+# Install only build dependencies
+RUN apt-get update && apt-get install -y --no-install-recommends gcc && rm -rf /var/lib/apt/lists/*
 
-# Copy requirements first (better caching)
+# Copy requirements
 COPY requirements.txt requirements-dev.txt ./
 
-# Upgrade pip & install deps INTO SYSTEM
+# Install runtime dependencies to a separate folder
 RUN python -m pip install --upgrade pip wheel \
-    && pip install --no-cache-dir --prefer-binary \
-       -r requirements.txt \
-       -r requirements-dev.txt
+    && pip install --prefix=/install --no-cache-dir -r requirements.txt
 
 # =========================
 # Runtime stage
@@ -29,16 +23,11 @@ FROM python:3.9-slim
 WORKDIR /app
 
 # Copy installed Python packages
-COPY --from=builder /usr/local/lib/python3.9/site-packages \
-                     /usr/local/lib/python3.9/site-packages
-COPY --from=builder /usr/local/bin /usr/local/bin
+COPY --from=builder /install /usr/local
 
 # Copy application code
 COPY src/ src/
 COPY deployment/ deployment/
-
-# ✅ REMOVE model copy line
-# COPY models/final_model.pt /app/models/final_model.pt
 
 # Environment variables
 ENV PYTHONUNBUFFERED=1
@@ -46,4 +35,5 @@ ENV PYTHONDONTWRITEBYTECODE=1
 
 EXPOSE 8000
 
+# Command
 CMD ["uvicorn", "src.inference.app:app", "--host", "0.0.0.0", "--port", "8000"]
