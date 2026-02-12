@@ -27,4 +27,17 @@ services:
       retries: 20
       start_period: 60s
 
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    depends_on:
+      cats-dogs-classifier:
+        condition: service_healthy
+    restart: unless-stopped
+
+
 
