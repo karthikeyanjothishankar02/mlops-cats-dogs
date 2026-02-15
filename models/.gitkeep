@@ -1,0 +1,13 @@
+# Placeholder file to keep the models directory in git
+# Model files (.pt) are tracked using Git LFS
+
+# Expected model files:
+# - best_model.pt: Best performing model during training
+# - final_model.pt: Final model after all epochs
+# - metrics.json: Training metrics
+
+# To train a new model:
+# python src/models/train.py --epochs 20 --batch_size 32
+
+# To create a test model for CI/CD (without full training):
+# python scripts/create_test_model.py

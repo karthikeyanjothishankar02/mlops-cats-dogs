@@ -1,0 +1,32 @@
+stages:
+  download_data:
+    cmd: python scripts/download_data.py
+    deps:
+      - scripts/download_data.py
+    outs:
+      - data/raw
+
+  preprocess_data:
+    cmd: python src/data/preprocess.py
+    deps:
+      - src/data/preprocess.py
+      - data/raw
+    outs:
+      - data/processed
+
+  train_model:
+    cmd: python src/models/train.py --epochs 20 --batch_size 32
+    deps:
+      - src/models/train.py
+      - src/models/cnn_model.py
+      - data/processed
+    params:
+      - src.utils.config.EPOCHS
+      - src.utils.config.BATCH_SIZE
+      - src.utils.config.LEARNING_RATE
+    outs:
+      - models/best_model.pt
+      - models/final_model.pt
+    metrics:
+      - models/metrics.json:
+          cache: false

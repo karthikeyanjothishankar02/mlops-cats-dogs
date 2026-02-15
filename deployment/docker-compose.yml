@@ -1,0 +1,42 @@
+services:
+  cats-dogs-classifier:
+    image: "${DOCKER_USERNAME:-local}/cats-dogs-classifier:latest"
+    container_name: cats-dogs-classifier
+    
+    build:
+      context: ..
+      dockerfile: Dockerfile
+
+    ports:
+      - "8000:8000"
+
+    environment:
+      - API_HOST=0.0.0.0
+      - API_PORT=8000
+      - LOG_LEVEL=INFO
+
+    # Models are baked into the image via Dockerfile
+    # No volume mount needed - avoids path issues in CI/CD
+
+    restart: unless-stopped
+
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 15s
+      timeout: 10s
+      retries: 20
+      start_period: 60s
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+    depends_on:
+      cats-dogs-classifier:
+        condition: service_healthy
+    restart: unless-stopped
+
+
