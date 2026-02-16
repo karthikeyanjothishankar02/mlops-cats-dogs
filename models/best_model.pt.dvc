@@ -1,0 +1,11 @@
+# DVC tracked file - trained model
+# Pull with: dvc pull models/best_model.pt.dvc
+# Push with: dvc push models/best_model.pt.dvc
+outs:
+- md5: <TO_BE_GENERATED_AFTER_TRAINING>
+  size: <TO_BE_GENERATED_AFTER_TRAINING>
+  hash: md5
+  path: best_model.pt
+
+
+

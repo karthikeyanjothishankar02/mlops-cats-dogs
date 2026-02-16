@@ -1,24 +1,23 @@
-# Git LFS configuration for large files
-# This file tells Git to use LFS for tracking binary model files
+# Git attributes configuration
+# Model files are tracked using DVC (not Git LFS)
+# See: https://dvc.org/doc
 
-# PyTorch model files
-*.pt filter=lfs diff=lfs merge=lfs -text
-*.pth filter=lfs diff=lfs merge=lfs -text
+# Text file handling
+*.py text=auto
+*.md text=auto
+*.yml text=auto
+*.yaml text=auto
+*.txt text=auto
+*.json text=auto
 
-# Keras/TensorFlow model files
-*.h5 filter=lfs diff=lfs merge=lfs -text
-*.hdf5 filter=lfs diff=lfs merge=lfs -text
+# Binary files
+*.jpg binary
+*.jpeg binary
+*.png binary
+*.gif binary
 
-# Pickle files (scikit-learn models)
-*.pkl filter=lfs diff=lfs merge=lfs -text
-*.pickle filter=lfs diff=lfs merge=lfs -text
+# Note: Large model files (*.pt, *.pth, *.h5, etc.) are tracked by DVC
+# They are NOT stored in Git/LFS. Use `dvc pull` to download them.
 
-# ONNX models
-*.onnx filter=lfs diff=lfs merge=lfs -text
 
-# Safetensors
-*.safetensors filter=lfs diff=lfs merge=lfs -text
 
-# Large data files
-*.zip filter=lfs diff=lfs merge=lfs -text
-*.tar.gz filter=lfs diff=lfs merge=lfs -text

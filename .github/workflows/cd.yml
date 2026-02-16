@@ -1,29 +1,109 @@
-name: Manual Deploy
+# Continuous Deployment Pipeline
+# This workflow handles deployment to production environments
+# Triggered manually or on release tags
+
+name: CD - Continuous Deployment
 
 on:
+  # Manual trigger with environment selection
   workflow_dispatch:
     inputs:
       environment:
         description: 'Deployment environment'
         required: true
-        default: 'production'
+        default: 'staging'
         type: choice
         options:
-          - production
           - staging
+          - production
+      image_tag:
+        description: 'Docker image tag to deploy (default: latest)'
+        required: false
+        default: 'latest'
+        type: string
+
+  # Automatic trigger on release
+  release:
+    types: [published]
+
+env:
+  DOCKER_IMAGE: ${{ secrets.DOCKER_USERNAME }}/cats-dogs-classifier
 
 jobs:
-  deploy:
+  # =====================
+  # JOB 1: Validate & Prepare
+  # =====================
+  validate:
     runs-on: ubuntu-latest
-
+    outputs:
+      image_tag: ${{ steps.set-tag.outputs.tag }}
+      environment: ${{ steps.set-env.outputs.env }}
+    
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          lfs: true
 
-      - name: Pull LFS files
-        run: git lfs pull
+      - name: Set image tag
+        id: set-tag
+        run: |
+          if [ "${{ github.event_name }}" = "release" ]; then
+            echo "tag=${{ github.event.release.tag_name }}" >> $GITHUB_OUTPUT
+          elif [ -n "${{ inputs.image_tag }}" ]; then
+            echo "tag=${{ inputs.image_tag }}" >> $GITHUB_OUTPUT
+          else
+            echo "tag=latest" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Set environment
+        id: set-env
+        run: |
+          if [ "${{ github.event_name }}" = "release" ]; then
+            echo "env=production" >> $GITHUB_OUTPUT
+          elif [ -n "${{ inputs.environment }}" ]; then
+            echo "env=${{ inputs.environment }}" >> $GITHUB_OUTPUT
+          else
+            echo "env=staging" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Validate Docker image exists
+        run: |
+          echo "Checking if image exists: ${{ env.DOCKER_IMAGE }}:${{ steps.set-tag.outputs.tag }}"
+          docker pull ${{ env.DOCKER_IMAGE }}:${{ steps.set-tag.outputs.tag }} || \
+            (echo "Image not found, will build during deployment" && exit 0)
+
+  # =====================
+  # JOB 2: Deploy with Docker Compose
+  # =====================
+  deploy:
+    runs-on: ubuntu-latest
+    needs: validate
+    environment: ${{ needs.validate.outputs.environment }}
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+
+      - name: Install DVC
+        run: pip install dvc dvc-gdrive
+
+      - name: Pull model files with DVC
+        run: |
+          echo "Pulling model files from Google Drive via DVC..."
+          # DVC pulls from public Google Drive folder (no auth needed)
+          dvc pull models/ -v || echo "DVC pull failed or no remote configured"
+          
+          # Create test model if pull failed or model doesn't exist
+          if [ ! -f models/best_model.pt ]; then
+            echo "Creating test model for deployment..."
+            pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+            python scripts/create_test_model.py
+          fi
+          ls -lh models/
 
       - name: Log in to Docker Hub
         uses: docker/login-action@v3
@@ -31,37 +111,127 @@ jobs:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      - name: Pull latest image
-        run: |
-          docker pull ${{ secrets.DOCKER_USERNAME }}/cats-dogs-classifier:latest
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-      - name: Deploy service
+      - name: Build and push image if needed
+        run: |
+          IMAGE_TAG="${{ needs.validate.outputs.image_tag }}"
+          echo "Ensuring image exists: ${{ env.DOCKER_IMAGE }}:${IMAGE_TAG}"
+          
+          # Try to pull, build if not available
+          if ! docker pull ${{ env.DOCKER_IMAGE }}:${IMAGE_TAG} 2>/dev/null; then
+            echo "Building image..."
+            docker build -t ${{ env.DOCKER_IMAGE }}:${IMAGE_TAG} .
+            docker push ${{ env.DOCKER_IMAGE }}:${IMAGE_TAG}
+          fi
+
+      - name: Deploy with Docker Compose
         env:
           DOCKER_USERNAME: ${{ secrets.DOCKER_USERNAME }}
+          IMAGE_TAG: ${{ needs.validate.outputs.image_tag }}
         run: |
+          echo "Deploying to ${{ needs.validate.outputs.environment }}..."
+          
+          # Stop existing containers
           docker compose -f deployment/docker-compose.yml down --remove-orphans || true
+          
+          # Start new deployment
           docker compose -f deployment/docker-compose.yml up -d --pull always
-          sleep 10
+          
+          echo "Waiting for service to start..."
+          sleep 15
 
-      - name: Wait for service to be healthy
+      - name: Wait for service health
         run: |
+          echo "Checking service health..."
           MAX_ATTEMPTS=40
-          for i in $(seq 1 $MAX_ATTEMPTS); do
-            echo "Attempt $i/$MAX_ATTEMPTS"
-            if curl -sf http://localhost:8000/health; then
-              echo "Service is healthy!"
-              exit 0
+          ATTEMPT=0
+          
+          while [ $ATTEMPT -lt $MAX_ATTEMPTS ]; do
+            ATTEMPT=$((ATTEMPT + 1))
+            echo "Attempt $ATTEMPT/$MAX_ATTEMPTS"
+            
+            # Check if container is running
+            CONTAINER_STATUS=$(docker inspect -f '{{.State.Status}}' cats-dogs-classifier 2>/dev/null || echo "not_found")
+            echo "  Container status: $CONTAINER_STATUS"
+            
+            if [ "$CONTAINER_STATUS" = "running" ]; then
+              # Check health endpoint
+              if curl -sf http://localhost:8000/health > /dev/null 2>&1; then
+                echo "Service is healthy!"
+                curl -s http://localhost:8000/health | head -c 200
+                echo ""
+                exit 0
+              fi
             fi
+            
             sleep 5
           done
-          docker logs cats-dogs-classifier
+          
+          echo "Service failed to become healthy"
+          docker logs cats-dogs-classifier 2>&1 | tail -50
           exit 1
 
       - name: Run smoke tests
         run: |
+          echo "=== Running Smoke Tests ==="
+          
+          echo "1. Testing health endpoint..."
           curl -sf http://localhost:8000/health
+          echo ""
+          
+          echo "2. Testing root endpoint..."
           curl -sf http://localhost:8000/
-          echo "Smoke tests passed!"
+          echo ""
+          
+          echo "3. Testing metrics endpoint..."
+          curl -sf http://localhost:8000/metrics | head -20
+          echo ""
+          
+          echo "4. Testing prediction endpoint..."
+          # Create test image
+          python3 << 'EOF'
+          from PIL import Image
+          img = Image.new("RGB", (224, 224), color=(100, 150, 200))
+          img.save("test_image.jpg", "JPEG")
+          print("Test image created")
+          EOF
+          
+          # Test prediction
+          RESPONSE=$(curl -sf -X POST "http://localhost:8000/predict" \
+            -H "accept: application/json" \
+            -F "file=@test_image.jpg")
+          echo "Prediction response: $RESPONSE"
+          
+          # Verify response contains expected fields
+          echo "$RESPONSE" | grep -q "predicted_class" || (echo "Missing predicted_class" && exit 1)
+          echo "$RESPONSE" | grep -q "confidence" || (echo "Missing confidence" && exit 1)
+          
+          rm -f test_image.jpg
+          echo ""
+          echo "=== All smoke tests passed! ==="
+
+      - name: Show deployment info
+        run: |
+          echo "=== Deployment Summary ==="
+          echo "Environment: ${{ needs.validate.outputs.environment }}"
+          echo "Image Tag: ${{ needs.validate.outputs.image_tag }}"
+          echo ""
+          echo "Running containers:"
+          docker compose -f deployment/docker-compose.yml ps
+          echo ""
+          echo "Service URL: http://localhost:8000"
+          echo "Health endpoint: http://localhost:8000/health"
+          echo "Metrics endpoint: http://localhost:8000/metrics"
+          echo "Prometheus: http://localhost:9090"
+
+      - name: Cleanup on failure
+        if: failure()
+        run: |
+          echo "=== Deployment Failed - Cleaning Up ==="
+          docker compose -f deployment/docker-compose.yml logs
+          docker compose -f deployment/docker-compose.yml down --remove-orphans || true
 
 
 

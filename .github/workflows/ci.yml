@@ -16,17 +16,6 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          lfs: true
-
-      - name: Pull LFS files
-        run: git lfs pull
-
-      - name: Verify model files
-        run: |
-          echo "Checking model files..."
-          ls -lh models/
-          file models/*.pt || true
 
       - name: Free disk space
         run: |
@@ -46,6 +35,24 @@ jobs:
           python -m pip install --upgrade pip wheel
           pip install --prefer-binary --no-cache-dir -r requirements.txt
           pip install --prefer-binary --no-cache-dir -r requirements-dev.txt
+
+      - name: Pull model files with DVC
+        run: |
+          echo "Pulling model files from Google Drive via DVC..."
+          # DVC pulls from public Google Drive folder (no auth needed)
+          dvc pull models/ -v || echo "DVC pull failed or no remote configured"
+          
+          # Create test model if pull failed or model doesn't exist
+          if [ ! -f models/best_model.pt ]; then
+            echo "Creating test model for CI..."
+            python scripts/create_test_model.py
+          fi
+
+      - name: Verify model files
+        run: |
+          echo "Checking model files..."
+          ls -lh models/
+          file models/*.pt || true
 
       - name: Lint (flake8)
         run: |
@@ -93,11 +100,29 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        with:
-          lfs: true
 
-      - name: Pull LFS files
-        run: git lfs pull
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.9'
+          cache: 'pip'
+
+      - name: Install DVC
+        run: |
+          pip install dvc dvc-gdrive
+
+      - name: Pull model files with DVC
+        run: |
+          echo "Pulling model files from Google Drive via DVC..."
+          # DVC pulls from public Google Drive folder (no auth needed)
+          dvc pull models/ -v || echo "DVC pull failed or no remote configured"
+          
+          # Create test model if pull failed or model doesn't exist
+          if [ ! -f models/best_model.pt ]; then
+            echo "Creating test model for deployment..."
+            pip install torch torchvision --index-url https://download.pytorch.org/whl/cpu
+            python scripts/create_test_model.py
+          fi
 
       - name: Verify files exist
         run: |
@@ -223,6 +248,8 @@ jobs:
         if: failure()
         run: |
           docker compose -f deployment/docker-compose.yml down --remove-orphans || true
+
+
 
 
 

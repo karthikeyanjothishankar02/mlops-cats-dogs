@@ -1,0 +1,29 @@
+[core]
+    remote = gdrive
+    autostage = true
+
+[remote "gdrive"]
+    url = gdrive://<YOUR_GDRIVE_FOLDER_ID>
+    gdrive_acknowledge_abuse = true
+
+# ============================================
+# DVC with Google Drive (Public Sharing)
+# ============================================
+#
+# Setup Instructions:
+# 1. Create a folder in Google Drive for your DVC/model files
+# 2. Upload your trained model files to this folder
+# 3. Right-click the folder -> Share -> "Anyone with the link" -> Viewer
+# 4. Copy the folder ID from URL: https://drive.google.com/drive/folders/FOLDER_ID
+# 5. Run: dvc remote modify gdrive url gdrive://YOUR_FOLDER_ID
+#
+# For pushing new models:
+# - You need to authenticate locally with: dvc push
+# - This will open a browser for Google OAuth (one-time setup)
+#
+# For pulling (CI/CD and team members):
+# - No authentication needed if folder is shared publicly!
+# - Just run: dvc pull
+
+
+

@@ -84,12 +84,14 @@ mlops-cats-dogs/
 │   └── prometheus/
 │       └── prometheus.yml         # Prometheus scraping config
 ├── models/
-│   ├── best_model.pt              # Best performing model (Git LFS)
-│   ├── final_model.pt             # Final trained model (Git LFS)
+│   ├── best_model.pt              # Best performing model (DVC tracked)
+│   ├── final_model.pt             # Final trained model (DVC tracked)
 │   └── metrics.json               # Training metrics
 ├── scripts/
 │   ├── create_test_model.py       # Generate test model for CI/CD
 │   ├── download_data.py           # Dataset download script
+│   ├── setup_dvc.sh               # DVC setup script (Linux/Mac)
+│   ├── setup_dvc.ps1              # DVC setup script (Windows)
 │   └── smoke_test.sh              # Post-deployment smoke tests
 ├── src/
 │   ├── data/
@@ -107,7 +109,7 @@ mlops-cats-dogs/
 ├── tests/
 │   ├── test_inference.py          # Inference unit tests
 │   └── test_preprocess.py         # Preprocessing unit tests
-├── .gitattributes                 # Git LFS configuration
+├── .gitattributes                 # Git attributes configuration
 ├── Dockerfile                     # Multi-stage Docker build
 ├── dvc.yaml                       # DVC pipeline definition
 ├── requirements.txt               # Production dependencies
@@ -678,5 +680,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - Dataset: [Kaggle Dogs vs Cats](https://www.kaggle.com/c/dogs-vs-cats)
 - Built with [FastAPI](https://fastapi.tiangolo.com/), [PyTorch](https://pytorch.org/), and [MLflow](https://mlflow.org/)
+
+
 
 

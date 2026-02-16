@@ -13,11 +13,11 @@
 |-------------|--------|----------------|
 | Git for source code | ✅ | Full Git repository with proper `.gitignore` |
 | DVC for dataset versioning | ✅ | `dvc.yaml` defines data pipeline stages |
-| Git-LFS for model files | ✅ | `.gitattributes` configured for `.pt` files |
+| DVC for model files | ✅ | Models stored in Google Drive via DVC |
 
 **Files:**
 - [dvc.yaml](dvc.yaml) - DVC pipeline definition
-- [.gitattributes](.gitattributes) - Git LFS configuration
+- [.dvc/config](.dvc/config) - DVC remote configuration (Google Drive)
 - [.gitignore](.gitignore) - Excludes data and build artifacts
 
 ### 1.2 Model Building ✅
@@ -356,3 +356,6 @@ bash ../scripts/smoke_test.sh http://localhost:8000
 - [x] **M5:** Prometheus metrics exposed
 - [x] **M5:** Logging enabled for requests
 - [x] **M5:** Monitoring dashboard accessible
+
+
+

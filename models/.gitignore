@@ -1,0 +1,16 @@
+# Model files are tracked by DVC, not Git
+*.pt
+*.pth
+*.h5
+*.hdf5
+*.pkl
+*.pickle
+*.onnx
+*.safetensors
+
+# Keep .dvc files and .gitkeep
+!*.dvc
+!.gitkeep
+
+
+
