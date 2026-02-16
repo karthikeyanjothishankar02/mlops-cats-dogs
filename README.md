@@ -682,6 +682,14 @@ For detailed requirement verification, see [ASSIGNMENT_CHECKLIST.md](ASSIGNMENT_
 | Rohith Raj R                     | 2024AA05337   | 100%  |
 
 ---
+Trained model artifact link: https://drive.google.com/drive/u/2/folders/1knSkL_LDsuWTXAIcv6UfdxhuXMUXbC65
+
+Github repository link: 
+https://github.com/karthikeyanjothishankar02/mlops-cats-dogs
+
+Youtube video link:
+https://www.youtube.com/watch?v=RA1ga014voI
+
 
 ## License
 
