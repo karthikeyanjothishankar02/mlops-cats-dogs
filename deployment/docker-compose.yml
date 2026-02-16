@@ -2,24 +2,16 @@ services:
   cats-dogs-classifier:
     image: "${DOCKER_USERNAME:-local}/cats-dogs-classifier:latest"
     container_name: cats-dogs-classifier
-    
     build:
       context: ..
       dockerfile: Dockerfile
-
     ports:
       - "8000:8000"
-
     environment:
       - API_HOST=0.0.0.0
       - API_PORT=8000
       - LOG_LEVEL=INFO
-
-    # Models are baked into the image via Dockerfile
-    # No volume mount needed - avoids path issues in CI/CD
-
     restart: unless-stopped
-
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
       interval: 15s
@@ -38,6 +30,7 @@ services:
       cats-dogs-classifier:
         condition: service_healthy
     restart: unless-stopped
+
   grafana:
     image: grafana/grafana:latest
     container_name: grafana
@@ -48,3 +41,6 @@ services:
     restart: unless-stopped
     volumes:
       - grafana_data:/var/lib/grafana
+
+volumes:
+  grafana_data:
