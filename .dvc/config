@@ -3,7 +3,7 @@
     autostage = true
 
 [remote "gdrive"]
-    url = gdrive://<YOUR_GDRIVE_FOLDER_ID>
+    url = gdrive://1knSkL_LDsuWTXAIcv6UfdxhuXMUXbC65
     gdrive_acknowledge_abuse = true
 
 # ============================================
@@ -24,6 +24,8 @@
 # For pulling (CI/CD and team members):
 # - No authentication needed if folder is shared publicly!
 # - Just run: dvc pull
+
+
 
 
 

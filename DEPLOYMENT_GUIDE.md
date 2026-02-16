@@ -12,13 +12,14 @@ This guide covers the complete workflow from local development to production dep
 2. [Local Development Setup](#local-development-setup)
 3. [Data Preparation](#data-preparation)
 4. [Model Training](#model-training)
-5. [DVC Setup with Google Drive](#dvc-setup-with-google-drive)
-6. [Local Testing](#local-testing)
-7. [Docker Containerization](#docker-containerization)
-8. [CI/CD Pipeline Setup](#cicd-pipeline-setup)
-9. [Production Deployment](#production-deployment)
-10. [Monitoring with Prometheus](#monitoring-with-prometheus)
-11. [Troubleshooting](#troubleshooting)
+5. [Model Download from Google Drive](#model-download-from-google-drive-no-dvc)
+6. [DVC Setup (Optional)](#dvc-setup-with-google-drive-optional)
+7. [Local Testing](#local-testing)
+8. [Docker Containerization](#docker-containerization)
+9. [CI/CD Pipeline Setup](#cicd-pipeline-setup)
+10. [Production Deployment](#production-deployment)
+11. [Monitoring with Prometheus](#monitoring-with-prometheus)
+12. [Troubleshooting](#troubleshooting)
 
 ---
 
@@ -31,8 +32,9 @@ This guide covers the complete workflow from local development to production dep
 | Python | 3.9+ | [python.org](https://www.python.org/downloads/) |
 | Docker | 20.10+ | [docker.com](https://www.docker.com/get-started) |
 | Docker Compose | 2.0+ | Included with Docker Desktop |
-| Git | 2.30+ | [git-scm.com](https://git-scm.com/downloads) |
-| DVC | 3.30+ | `pip install dvc dvc-gdrive` |
+| Git | 2.30+ | [git-scm.com](https://git-scm.com/downloads/) |
+| gdown | 5.1+ | `pip install gdown` (for model download) |
+| DVC (optional) | 3.30+ | `pip install dvc dvc-gdrive` |
 
 ### Hardware Requirements
 
@@ -180,7 +182,43 @@ ls -lh models/
 
 ---
 
-## DVC Setup with Google Drive
+## Model Download from Google Drive (No DVC)
+
+This project supports direct model download from Google Drive without requiring DVC setup.
+
+### Option A: Automatic Download
+
+The model will be automatically downloaded when the application starts if not found locally.
+
+**Configure the Google Drive folder ID:**
+```bash
+# Set environment variable (default is already configured)
+export GDRIVE_FOLDER_ID="1knSkL_LDsuWTXAIcv6UfdxhuXMUXbC65"
+```
+
+**Or manually download:**
+```bash
+python scripts/download_model.py
+```
+
+### Option B: Manual Download
+
+1. Go to the [Google Drive folder](https://drive.google.com/drive/folders/1knSkL_LDsuWTXAIcv6UfdxhuXMUXbC65)
+2. Download `best_model.pt`
+3. Place it in the `models/` directory
+
+### Docker Build
+
+The Dockerfile is configured to automatically download the model during build:
+```bash
+docker build -t cats-dogs-classifier .
+```
+
+---
+
+## DVC Setup with Google Drive (Optional)
+
+> **Note:** DVC setup is optional. You can skip this section if using direct Google Drive download above.
 
 ### Step 1: Create Google Drive Folder
 
@@ -628,6 +666,8 @@ curl http://localhost:8000/health    # Health check
 ---
 
 *Last updated: February 2026*
+
+
 
 
 

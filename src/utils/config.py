@@ -1,8 +1,9 @@
 """
 Configuration settings for the MLOps Cats vs Dogs project
 """
-from pathlib import Path
+
 import os
+from pathlib import Path
 
 # ========================================
 # Path Configuration
@@ -84,6 +85,7 @@ LOG_FORMAT = "%(asctime)s - %(name)s - %(levelname)s - %(message)s"
 DOCKER_IMAGE_NAME = os.getenv("DOCKER_IMAGE_NAME", "cats-dogs-classifier")
 DOCKER_REGISTRY = os.getenv("DOCKER_REGISTRY", "docker.io")
 
+
 # ========================================
 # Ensure directories exist
 # ========================================
@@ -124,3 +126,6 @@ if __name__ == "__main__":
     print(f"Learning Rate: {LEARNING_RATE}")
     print(f"\nMLflow Experiment: {MLFLOW_EXPERIMENT_NAME}")
     print(f"API Host: {API_HOST}:{API_PORT}")
+
+
+

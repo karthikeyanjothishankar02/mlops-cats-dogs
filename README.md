@@ -45,7 +45,7 @@ End-to-end MLOps pipeline for binary image classification (Cats vs Dogs) designe
 - **Automated CI/CD** using GitHub Actions
 - **Containerized deployment** with Docker
 - **Experiment tracking** with MLflow
-- **Data versioning** with DVC
+- **Model download** from Google Drive (DVC optional)
 - **Production-grade API** with FastAPI
 
 The classifier achieves **>90% accuracy** and can process images in **50-200ms** on CPU.
@@ -61,7 +61,7 @@ The classifier achieves **>90% accuracy** and can process images in **50-200ms**
 | **Docker Support** | Multi-stage Dockerfile for optimized container images |
 | **CI/CD Pipeline** | Automated testing, building, and deployment with GitHub Actions |
 | **Experiment Tracking** | MLflow integration for tracking metrics, parameters, and artifacts |
-| **Data Versioning** | DVC for reproducible data pipelines |
+| **Model Storage** | Google Drive with automatic download (DVC optional) |
 | **Health Checks** | Docker-ready liveness and readiness probes |
 | **Monitoring** | Prometheus metrics and structured logging |
 | **Comprehensive Tests** | 20+ unit tests with coverage reporting |
@@ -90,6 +90,7 @@ mlops-cats-dogs/
 ├── scripts/
 │   ├── create_test_model.py       # Generate test model for CI/CD
 │   ├── download_data.py           # Dataset download script
+│   ├── download_model.py          # Download model from Google Drive
 │   ├── setup_dvc.sh               # DVC setup script (Linux/Mac)
 │   ├── setup_dvc.ps1              # DVC setup script (Windows)
 │   └── smoke_test.sh              # Post-deployment smoke tests
@@ -680,6 +681,8 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 - Dataset: [Kaggle Dogs vs Cats](https://www.kaggle.com/c/dogs-vs-cats)
 - Built with [FastAPI](https://fastapi.tiangolo.com/), [PyTorch](https://pytorch.org/), and [MLflow](https://mlflow.org/)
+
+
 
 
 

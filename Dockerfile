@@ -39,7 +39,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
     PYTHONUNBUFFERED=1 \
     PYTHONPATH=/app:/app/deps \
     API_HOST=0.0.0.0 \
-    API_PORT=8000
+    API_PORT=8000 \
+    GDRIVE_FOLDER_ID=1knSkL_LDsuWTXAIcv6UfdxhuXMUXbC65
 
 # Set working directory
 WORKDIR /app
@@ -57,7 +58,11 @@ COPY --from=builder /build/deps /app/deps
 
 # Copy application code
 COPY src/ /app/src/
+COPY scripts/download_model.py /app/scripts/download_model.py
 COPY models/ /app/models/
+
+# Download model from Google Drive if not present
+RUN python -c "import sys; sys.path.insert(0, '/app'); from scripts.download_model import ensure_model_exists; ensure_model_exists()" || echo "Model will be downloaded at runtime"
 
 # Create non-root user for security
 RUN useradd --create-home --shell /bin/bash appuser \
@@ -75,3 +80,6 @@ HEALTHCHECK --interval=30s --timeout=10s --start-period=60s --retries=3 \
 
 # Run the application
 CMD ["python", "-m", "uvicorn", "src.inference.app:app", "--host", "0.0.0.0", "--port", "8000"]
+
+
+
