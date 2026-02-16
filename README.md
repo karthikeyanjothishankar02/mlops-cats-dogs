@@ -671,6 +671,18 @@ For detailed requirement verification, see [ASSIGNMENT_CHECKLIST.md](ASSIGNMENT_
 
 ---
 
+## 🎯 Assignment Contribution – 100%
+
+| Name                              | Student ID     | Score |
+|-----------------------------------|---------------|-------|
+| Karthikeyan J                    | 2024AA05372   | 100%  |
+| Anandan A                        | 2024AA05269   | 100%  |
+| Ganapathy Subramanian S          | 2024AA05188   | 100%  |
+| Jangale Savedana Subash Prathibha| 2024AA05187   | 100%  |
+| Rohith Raj R                     | 2024AA05337   | 100%  |
+
+---
+
 ## License
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
