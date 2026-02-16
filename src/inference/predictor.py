@@ -170,6 +170,3 @@ if __name__ == "__main__":
     print("\nClass Probabilities:")
     for class_name, prob in result["probabilities"].items():
         print(f"  {class_name}: {prob:.4f}")
-
-
-

@@ -226,6 +226,3 @@ if __name__ == "__main__":
     print_classification_report(y_true, y_pred, class_names)
 
     print("\nMetrics utilities test complete!")
-
-
-

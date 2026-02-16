@@ -126,6 +126,3 @@ if __name__ == "__main__":
     print(f"Learning Rate: {LEARNING_RATE}")
     print(f"\nMLflow Experiment: {MLFLOW_EXPERIMENT_NAME}")
     print(f"API Host: {API_HOST}:{API_PORT}")
-
-
-
